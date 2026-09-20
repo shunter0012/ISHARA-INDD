@@ -1,0 +1,11 @@
+{
+  "name": "ISHARA IND",
+  "description": "Modern social media platform with stories, reels, messaging, audio sharing, and live calling.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,166 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Diagnostic connection verification endpoint - strictly read-only, no public writes
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Users and Profiles
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (request.auth.uid == userId || request.resource.data.id == request.auth.uid);
+      allow update: if isSignedIn() && (request.auth.uid == userId || resource.data.id == request.auth.uid);
+      allow delete: if false;
+    }
+
+    match /profiles/{userId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Posts & Reels
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.authorId == request.auth.uid || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likesCount', 'commentsCount', 'sharesCount'])
+      );
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+    }
+
+    match /reels/{reelId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.authorId == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likesCount', 'commentsCount', 'viewsCount'])
+      );
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+    }
+
+    // Comments & Likes
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+    }
+
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.followerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.followerId == request.auth.uid;
+    }
+
+    // Conversations & Messages
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && (resource.data.participantIds.hasAny([request.auth.uid]));
+      allow create: if isSignedIn() && (request.resource.data.participantIds.hasAny([request.auth.uid]));
+      allow update: if isSignedIn() && (resource.data.participantIds.hasAny([request.auth.uid]));
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+        allow update: if isSignedIn() && (
+          resource.data.senderId == request.auth.uid ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'seenAt', 'readBy'])
+        );
+        allow delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid ||
+        (resource.data.participantIds != null && resource.data.participantIds.hasAny([request.auth.uid]))
+      );
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.senderId == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'seenAt', 'readBy'])
+      );
+      allow delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+    }
+
+    match /groups/{groupId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        resource.data.adminIds.hasAny([request.auth.uid]) ||
+        resource.data.memberIds.hasAny([request.auth.uid])
+      );
+      allow delete: if isSignedIn() && resource.data.adminIds.hasAny([request.auth.uid]);
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Reports (write-only for authenticated reporter, no client read)
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+    // Ads (read-only for all clients, write restricted)
+    match /ads/{adId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Admin data (protected from direct client read & write)
+    match /admin/{adminDoc} {
+      allow read, write: if false;
+    }
+
+    // Media blobs & sync snapshots
+    match /media_blobs/{blobId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /chunks/{chunkId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    match /app_sync/{docId} {
+      allow read, write: if true;
+    }
+
+    match /messageDeletions/{deletionId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Strict default deny for any unspecified path
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

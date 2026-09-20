@@ -1,0 +1,12 @@
+node_modules
+dist
+*.log
+*.tar.gz
+.DS_Store
+data/chunks/*
+data/backups/*
+storage/backups/*
+storage/vault/*
+data/media_vault.backup.json
+public/uploads/*
+public/storage/*

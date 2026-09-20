@@ -1,0 +1,316 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and account information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique user identifier" },
+        "username": { "type": "string", "description": "Normalized username handle" },
+        "displayName": { "type": "string", "description": "Display name of the user" },
+        "avatarUrl": { "type": "string", "description": "Profile picture URL" },
+        "bio": { "type": "string", "description": "User biography" },
+        "role": { "type": "string", "description": "User account role" },
+        "phone": { "type": "string", "description": "Verified phone number" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["id", "username", "displayName"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "Extended user profile metadata and customizable links",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "User UID" },
+        "bio": { "type": "string", "description": "Extended biography" },
+        "website": { "type": "string", "description": "Personal or business link" },
+        "location": { "type": "string", "description": "Location description" }
+      },
+      "required": ["userId"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "User feed post with media and captions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Post identifier" },
+        "authorId": { "type": "string", "description": "Author user ID" },
+        "caption": { "type": "string", "description": "Post text caption" },
+        "mediaUrl": { "type": "string", "description": "Permanent media storage URL" },
+        "mediaType": { "type": "string", "description": "Type of media (image or video)" },
+        "thumbnailUrl": { "type": "string", "description": "Video poster thumbnail" },
+        "createdAt": { "type": "string", "description": "Creation ISO timestamp" }
+      },
+      "required": ["id", "authorId", "mediaUrl"]
+    },
+    "Reel": {
+      "title": "Reel",
+      "description": "Short-form video reel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Reel identifier" },
+        "authorId": { "type": "string", "description": "Author user ID" },
+        "caption": { "type": "string", "description": "Reel caption" },
+        "videoUrl": { "type": "string", "description": "Permanent video URL" },
+        "thumbnailUrl": { "type": "string", "description": "Poster preview image" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["id", "authorId", "videoUrl"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Comment on a post or reel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Comment ID" },
+        "postId": { "type": "string", "description": "Parent post or reel ID" },
+        "authorId": { "type": "string", "description": "Author user ID" },
+        "text": { "type": "string", "description": "Comment text content" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["id", "postId", "authorId", "text"]
+    },
+    "Like": {
+      "title": "Like",
+      "description": "Post or reel like record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Like record ID (${targetId}_${userId})" },
+        "targetId": { "type": "string", "description": "Liked post or reel ID" },
+        "userId": { "type": "string", "description": "User who liked" },
+        "createdAt": { "type": "string", "description": "Like timestamp" }
+      },
+      "required": ["id", "targetId", "userId"]
+    },
+    "Follow": {
+      "title": "Follow",
+      "description": "Follow relationship between two accounts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Follow record ID (${followerId}_${followingId})" },
+        "followerId": { "type": "string", "description": "Follower UID" },
+        "followingId": { "type": "string", "description": "Target user UID being followed" },
+        "createdAt": { "type": "string", "description": "Follow timestamp" }
+      },
+      "required": ["id", "followerId", "followingId"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct message or group conversation metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Conversation ID" },
+        "participantIds": { "type": "array", "description": "List of participant user UIDs" },
+        "isGroup": { "type": "boolean", "description": "Whether this is a group chat" },
+        "groupName": { "type": "string", "description": "Name for group chats" },
+        "updatedAt": { "type": "string", "description": "Last activity timestamp" }
+      },
+      "required": ["id", "participantIds"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Message ID" },
+        "conversationId": { "type": "string", "description": "Parent conversation ID" },
+        "senderId": { "type": "string", "description": "Author UID" },
+        "text": { "type": "string", "description": "Message text" },
+        "createdAt": { "type": "string", "description": "Sent timestamp" },
+        "isRead": { "type": "boolean", "description": "Read status" }
+      },
+      "required": ["id", "conversationId", "senderId"]
+    },
+    "Group": {
+      "title": "Group",
+      "description": "Group chat configuration and members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Group ID" },
+        "name": { "type": "string", "description": "Group display name" },
+        "adminIds": { "type": "array", "description": "Admin UIDs" },
+        "memberIds": { "type": "array", "description": "Member UIDs" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["id", "name", "adminIds", "memberIds"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification alert",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Notification ID" },
+        "userId": { "type": "string", "description": "Recipient UID" },
+        "type": { "type": "string", "description": "Notification type" },
+        "text": { "type": "string", "description": "Alert text" },
+        "isRead": { "type": "boolean", "description": "Read status" },
+        "createdAt": { "type": "string", "description": "Timestamp" }
+      },
+      "required": ["id", "userId", "type"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Content or user moderation report",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Report ID" },
+        "reporterId": { "type": "string", "description": "Reporter UID" },
+        "targetType": { "type": "string", "description": "Target type" },
+        "targetId": { "type": "string", "description": "Target ID" },
+        "reason": { "type": "string", "description": "Reason for report" }
+      },
+      "required": ["id", "reporterId", "reason"]
+    },
+    "Ad": {
+      "title": "Ad",
+      "description": "Sponsored feed promotion item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Ad identifier" },
+        "title": { "type": "string", "description": "Headline" },
+        "mediaUrl": { "type": "string", "description": "Creative asset URL" },
+        "targetUrl": { "type": "string", "description": "Destination link" },
+        "placement": { "type": "string", "description": "Placement feed" },
+        "isActive": { "type": "boolean", "description": "Status" }
+      },
+      "required": ["id", "title", "mediaUrl"]
+    },
+    "MediaBlob": {
+      "title": "MediaBlob",
+      "description": "Persistent cloud media file chunk or storage record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Media file identifier" },
+        "filename": { "type": "string", "description": "Original file name" },
+        "mimeType": { "type": "string", "description": "MIME type of the media" },
+        "size": { "type": "string", "description": "Total size in bytes" },
+        "totalChunks": { "type": "string", "description": "Total chunks count" },
+        "createdAt": { "type": "string", "description": "Upload timestamp" }
+      },
+      "required": ["id", "filename", "mimeType"]
+    },
+    "MediaChunk": {
+      "title": "MediaChunk",
+      "description": "Individual chunk of binary media data preserved persistently",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Chunk identifier" },
+        "mediaId": { "type": "string", "description": "Parent media ID" },
+        "index": { "type": "string", "description": "Chunk index" },
+        "data": { "type": "string", "description": "Base64 payload chunk" }
+      },
+      "required": ["id", "mediaId", "data"]
+    },
+    "PersistentSync": {
+      "title": "PersistentSync",
+      "description": "Persistent cloud database snapshots",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Sync segment identifier" },
+        "payload": { "type": "string", "description": "JSON snapshot string" },
+        "version": { "type": "string", "description": "Snapshot schema version" },
+        "updatedAt": { "type": "string", "description": "Last updated ISO string" }
+      },
+      "required": ["id", "payload", "updatedAt"]
+    },
+    "MessageDeletion": {
+      "title": "MessageDeletion",
+      "description": "Per-user message deletion record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique record id (${messageId}_${userId})" },
+        "messageId": { "type": "string", "description": "Target message ID" },
+        "userId": { "type": "string", "description": "User who deleted the message for themselves" },
+        "deletedAt": { "type": "string", "description": "Deletion ISO timestamp" }
+      },
+      "required": ["id", "messageId", "userId", "deletedAt"]
+    },
+    "TestConnection": {
+      "title": "TestConnection",
+      "description": "Connection verification probe",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Test doc ID" },
+        "status": { "type": "string", "description": "Connectivity test status" }
+      }
+    }
+  },
+  "firestore": {
+    "/test/{testId}": {
+      "schema": "TestConnection",
+      "description": "Diagnostic connection validation probe (strictly read-only)"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User accounts collection"
+    },
+    "/profiles/{userId}": {
+      "schema": "Profile",
+      "description": "User profiles collection"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Feed posts collection"
+    },
+    "/reels/{reelId}": {
+      "schema": "Reel",
+      "description": "Short video reels collection"
+    },
+    "/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments collection"
+    },
+    "/likes/{likeId}": {
+      "schema": "Like",
+      "description": "Post and reel likes collection"
+    },
+    "/follows/{followId}": {
+      "schema": "Follow",
+      "description": "Social graph follower relationships"
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Conversations and chat rooms"
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Direct chat messages"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Global messages index"
+    },
+    "/groups/{groupId}": {
+      "schema": "Group",
+      "description": "Group chats"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Moderation reports"
+    },
+    "/ads/{adId}": {
+      "schema": "Ad",
+      "description": "Sponsored feed ads"
+    },
+    "/media_blobs/{blobId}": {
+      "schema": "MediaBlob",
+      "description": "Media blob registry"
+    },
+    "/media_blobs/{blobId}/chunks/{chunkId}": {
+      "schema": "MediaChunk",
+      "description": "Media binary chunk data"
+    },
+    "/app_sync/{docId}": {
+      "schema": "PersistentSync",
+      "description": "Persistent cloud database snapshots"
+    },
+    "/messageDeletions/{deletionId}": {
+      "schema": "MessageDeletion",
+      "description": "Per-user message deletion records"
+    }
+  }
+}
