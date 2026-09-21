@@ -6,10 +6,15 @@ dist
 *.log
 *.tar.gz
 .DS_Store
+bun.lock
 data/chunks/*
 data/backups/*
+data/permanent_storage/*
+data/media_vault.backup.json
+data/*.tmp.*
+*.tmp.*
 storage/backups/*
 storage/vault/*
-data/media_vault.backup.json
+storage/uploads/*
 public/uploads/*
 public/storage/*

@@ -25,12 +25,9 @@ const isProduction = process.env.NODE_ENV === 'production' ||
   (typeof currentFilename === 'string' && currentFilename.endsWith('.cjs'));
 
 // Port configuration:
-// In the AI Studio dev container, Nginx runs on NGINX_PORT (8080) and proxies traffic to DEFAULT_APP_PORT (3000).
-// In published Cloud Run containers, there is no Nginx proxy; Cloud Run sets PORT (typically 8080) and expects listening on PORT.
-const isDevNginxProxy = Boolean(process.env.NGINX_PORT && process.env.NGINX_PORT === '8080');
-const PORT = isDevNginxProxy
-  ? Number(process.env.DEFAULT_APP_PORT || 3000)
-  : Number(process.env.PORT || process.env.DEFAULT_APP_PORT || 8080);
+// In AI Studio containers (dev and published preview), Nginx binds to 8080 and proxies traffic to port 3000.
+// When NGINX_PORT is present, the app must bind to port 3000 to prevent EADDRINUSE collisions.
+const PORT = process.env.NGINX_PORT ? 3000 : Number(process.env.PORT || process.env.DEFAULT_APP_PORT || 3000);
 import { AuthService } from './server/services/AuthService';
 import { PostService } from './server/services/PostService';
 import { ReelService } from './server/services/ReelService';
@@ -1232,15 +1229,27 @@ app.get('/api/profile/:username', optionalAuth, (req: Request, res: Response) =>
   }
 });
 
-app.post('/api/profile/update', authenticate, async (req: Request, res: Response) => {
+const handleProfileUpdate = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-    const updated = await ProfileService.updateProfile(user.id, req.body);
-    return res.json({ profile: updated });
+    const authUser = (req as any).user;
+    const targetUserId = req.params.id || authUser.id;
+    if (targetUserId !== authUser.id && authUser.role !== 'OWNER_ADMIN' && authUser.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Unauthorized to edit this profile.' });
+    }
+    const updated = await ProfileService.updateProfile(targetUserId, req.body);
+    const token = AuthService.generateToken(updated);
+    return res.json({ profile: updated, user: updated, token });
   } catch (err: any) {
-    return res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: err.message || 'Failed to update profile' });
   }
-});
+};
+
+app.post('/api/profile/update', authenticate, handleProfileUpdate);
+app.put('/api/profile/update', authenticate, handleProfileUpdate);
+app.patch('/api/profile/update', authenticate, handleProfileUpdate);
+app.put('/api/users/:id', authenticate, handleProfileUpdate);
+app.patch('/api/users/:id', authenticate, handleProfileUpdate);
+app.post('/api/users/:id', authenticate, handleProfileUpdate);
 
 app.get('/api/follow/status/:id', authenticate, (req: Request, res: Response) => {
   const user = (req as any).user;
@@ -2212,14 +2221,6 @@ async function startServer() {
   });
 
   server.on('error', (err: any) => {
-    if (err && err.code === 'EADDRINUSE') {
-      const fallbackPort = PORT === 8080 ? 3000 : 8080;
-      console.warn(`[Server] Port ${PORT} already in use, attempting fallback to port ${fallbackPort}...`);
-      server.listen(fallbackPort, host, () => {
-        console.log(`[Server] Fallback server active on http://${host}:${fallbackPort} (production=${isProd})`);
-      });
-      return;
-    }
     console.error('[Server] Critical server listen error:', err);
     process.exit(1);
   });

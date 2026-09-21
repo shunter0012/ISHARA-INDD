@@ -399,8 +399,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <button
                       id="profile-edit-btn"
                       onClick={() => {
-                        setSettingsTab('edit-profile');
-                        setIsSettingsOpen(true);
+                        setIsEditOpen(true);
                       }}
                       className="px-4 py-1.5 bg-[#F5F5F5] hover:bg-[#EBEBEB] text-[#1A1A1A] text-xs font-semibold rounded-xl transition-colors cursor-pointer"
                     >
@@ -744,7 +743,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <EditProfileModal
           user={profileUser}
           onClose={() => setIsEditOpen(false)}
-          onProfileUpdated={fetchProfile}
+          onProfileUpdated={(updatedUser?: User) => {
+            fetchProfile();
+            if (updatedUser?.username && updatedUser.username !== profileUser.username) {
+              onSelectUser(updatedUser.username);
+            }
+          }}
         />
       )}
 
@@ -809,6 +813,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         }}
         initialTab={settingsTab}
         onOpenAdmin={onOpenAdmin}
+        onProfileUpdated={(updatedUser?: User) => {
+          fetchProfile();
+          if (updatedUser?.username && updatedUser.username !== profileUser?.username) {
+            onSelectUser(updatedUser.username);
+          }
+        }}
       />
     </div>
   );

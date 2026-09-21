@@ -212,6 +212,29 @@ class IsharaAuthService {
   }
 
   /**
+   * Immediately updates current user attributes and notifies observers without forcing a full re-login
+   */
+  public updateCurrentUser(updatedUser: Partial<User>, newToken?: string): void {
+    if (!this.currentUser) return;
+    this.currentUser = { ...this.currentUser, ...updatedUser };
+    if (newToken) {
+      this.currentToken = newToken;
+      try {
+        localStorage.setItem(TOKEN_KEY, newToken);
+      } catch {}
+    }
+    try {
+      localStorage.setItem(USER_KEY, JSON.stringify(this.currentUser));
+      if (this.currentToken) {
+        this.saveToSavedAccounts(this.currentUser, this.currentToken);
+      }
+    } catch (e) {
+      console.warn('[IsharaAuth] LocalStorage save warning in updateCurrentUser:', e);
+    }
+    this.notifyObservers();
+  }
+
+  /**
    * Explicit User Sign Out ONLY.
    * Never called automatically or accidentally during deployment, refresh, or startup.
    */

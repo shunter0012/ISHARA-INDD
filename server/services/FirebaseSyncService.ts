@@ -8,6 +8,7 @@ import {
   getDoc, 
   collection, 
   getDocs,
+  setLogLevel,
   Firestore
 } from 'firebase/firestore';
 
@@ -66,6 +67,10 @@ export function getFirestoreDB(): Firestore | null {
       initFailed = true;
       return null;
     }
+
+    try {
+      setLogLevel('silent');
+    } catch {}
 
     const app = getApps().length > 0 ? getApp() : initializeApp(config);
     // CRITICAL: Always provide firestoreDatabaseId

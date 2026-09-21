@@ -5,12 +5,13 @@ import { updateUserProfileInFirestore } from '../../lib/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 import { uploadMediaFile } from '../../lib/upload';
 import { compressProfileImage, resolveAvatarUrl, saveLocalAvatarCache, getDefaultAvatar } from '../../lib/avatar';
-import { X, Camera, Upload, Loader2, Check, Phone } from 'lucide-react';
+import { isharaAuth } from '../../lib/auth';
+import { X, Camera, Upload, Loader2, Check, Phone, AtSign } from 'lucide-react';
 
 interface EditProfileModalProps {
   user: User;
   onClose: () => void;
-  onProfileUpdated: () => void;
+  onProfileUpdated: (updatedUser?: User) => void;
 }
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
@@ -20,7 +21,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 }) => {
   const { refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [displayName, setDisplayName] = useState(user.displayName);
+  const [username, setUsername] = useState(user.username || '');
+  const [displayName, setDisplayName] = useState(user.displayName || '');
   const [bio, setBio] = useState(user.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(resolveAvatarUrl(user));
   const [avatarBase64, setAvatarBase64] = useState<string | undefined>(user.avatarBase64);
@@ -73,12 +75,21 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     e.preventDefault();
     setSaving(true);
     setUploadError(null);
+
+    const cleanUsername = username.trim().replace(/^@/, '').toLowerCase();
+    if (!cleanUsername) {
+      setUploadError('Username cannot be empty');
+      setSaving(false);
+      return;
+    }
+
     try {
-      await apiRequest('/profile/update', {
+      const res = await apiRequest<{ profile: User; user?: User; token?: string }>('/profile/update', {
         method: 'POST',
         body: JSON.stringify({
-          displayName,
-          bio,
+          username: cleanUsername,
+          displayName: displayName.trim(),
+          bio: bio.trim(),
           avatarUrl,
           avatarBase64,
           isPrivate,
@@ -86,21 +97,29 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         })
       });
 
+      const updatedUser = res.user || res.profile;
+
       if (avatarBase64) {
         saveLocalAvatarCache(user.id, avatarBase64);
       }
 
+      // Immediately sync active user in singleton session and cache
+      if (updatedUser) {
+        isharaAuth.updateCurrentUser(updatedUser, res.token);
+      }
+
       // Mirror update directly to Cloud Firestore
       updateUserProfileInFirestore(user.id, {
-        displayName,
-        bio,
+        username: cleanUsername,
+        displayName: displayName.trim(),
+        bio: bio.trim(),
         avatarUrl,
         avatarBase64,
         isPrivate
       }).catch(() => {});
 
       await refreshUser();
-      onProfileUpdated();
+      onProfileUpdated(updatedUser);
       onClose();
     } catch (err: any) {
       setUploadError(err.message || 'Failed to update profile');
@@ -196,6 +215,22 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           </div>
 
           <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Username</label>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9._]/g, '').toLowerCase())}
+                placeholder="username"
+                className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-black focus:bg-white font-medium"
+              />
+              <AtSign className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Letters, numbers, periods, and underscores only</p>
+          </div>
+
+          <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">Display Name</label>
             <input
               type="text"
@@ -207,9 +242,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Bio</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-gray-700">Bio</label>
+              <span className="text-[10px] text-gray-400">{bio.length}/160</span>
+            </div>
             <textarea
               rows={3}
+              maxLength={160}
               value={bio}
               onChange={e => setBio(e.target.value)}
               placeholder="Tell everyone a bit about yourself..."

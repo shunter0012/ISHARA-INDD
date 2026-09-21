@@ -153,11 +153,12 @@ export class ProfileService {
       }
     }
 
-    // Propagate profile picture and display name updates to all user-authored content
-    // so profile pictures uploaded remain across all views in the web app
+    // Propagate profile picture, display name, and username updates to all user-authored content
+    // so profile updates remain consistent across all views in the web app
     const updatedAvatar = user.avatarUrl;
     const updatedAvatarBase64 = user.avatarBase64;
     const updatedName = user.displayName;
+    const updatedUsername = user.username;
 
     if (data.posts) {
       data.posts.forEach(p => {
@@ -165,6 +166,7 @@ export class ProfileService {
           p.author.avatarUrl = updatedAvatar;
           if (updatedAvatarBase64) p.author.avatarBase64 = updatedAvatarBase64;
           if (updatedName) p.author.displayName = updatedName;
+          if (updatedUsername) p.author.username = updatedUsername;
         }
       });
     }
@@ -175,6 +177,7 @@ export class ProfileService {
           r.author.avatarUrl = updatedAvatar;
           if (updatedAvatarBase64) r.author.avatarBase64 = updatedAvatarBase64;
           if (updatedName) r.author.displayName = updatedName;
+          if (updatedUsername) r.author.username = updatedUsername;
         }
       });
     }
@@ -185,6 +188,7 @@ export class ProfileService {
           s.author.avatarUrl = updatedAvatar;
           if (updatedAvatarBase64) s.author.avatarBase64 = updatedAvatarBase64;
           if (updatedName) s.author.displayName = updatedName;
+          if (updatedUsername) s.author.username = updatedUsername;
         }
       });
     }
@@ -195,6 +199,7 @@ export class ProfileService {
           c.author.avatarUrl = updatedAvatar;
           if (updatedAvatarBase64) c.author.avatarBase64 = updatedAvatarBase64;
           if (updatedName) c.author.displayName = updatedName;
+          if (updatedUsername) c.author.username = updatedUsername;
         }
       });
     }

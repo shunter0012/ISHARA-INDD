@@ -4,6 +4,7 @@ import { apiRequest } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { uploadMediaFile } from '../../lib/upload';
 import { resolveAvatarUrl, compressProfileImage, saveLocalAvatarCache } from '../../lib/avatar';
+import { isharaAuth } from '../../lib/auth';
 import { 
   X, 
   User as UserIcon, 
@@ -25,7 +26,9 @@ import {
   Radio,
   MessageSquare,
   PhoneCall,
-  ShieldAlert
+  ShieldAlert,
+  AtSign,
+  Phone
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -33,13 +36,15 @@ interface SettingsModalProps {
   onClose: () => void;
   initialTab?: 'account' | 'edit-profile' | 'password' | 'privacy' | 'notifications' | 'blocked' | 'preferences';
   onOpenAdmin?: () => void;
+  onProfileUpdated?: (updatedUser?: User) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   initialTab = 'account',
-  onOpenAdmin
+  onOpenAdmin,
+  onProfileUpdated
 }) => {
   const { user, refreshUser, logout, savedAccounts, setIsAccountSwitcherOpen } = useAuth();
   const [activeTab, setActiveTab] = useState<'account' | 'edit-profile' | 'password' | 'privacy' | 'notifications' | 'blocked' | 'preferences'>(initialTab);
@@ -51,8 +56,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Edit Profile fields
+  const [username, setUsername] = useState(user?.username || '');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [phone, setPhone] = useState(user?.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(resolveAvatarUrl(user));
   const [avatarBase64, setAvatarBase64] = useState<string | undefined>(user?.avatarBase64);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -73,8 +80,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     if (!isOpen || !user) return;
 
+    setUsername(user.username || '');
     setDisplayName(user.displayName || '');
     setBio(user.bio || '');
+    setPhone(user.phone || '');
     setAvatarUrl(resolveAvatarUrl(user));
     setAvatarBase64(user.avatarBase64);
     loadSettings();
@@ -134,20 +143,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!user) return;
     setSaving(true);
 
+    const cleanUsername = username.trim().replace(/^@/, '').toLowerCase();
+    if (!cleanUsername) {
+      showToast('error', 'Username cannot be empty.');
+      setSaving(false);
+      return;
+    }
+
     try {
-      await apiRequest(`/users/${user.id}`, {
-        method: 'PUT',
+      const res = await apiRequest<{ profile: User; user?: User; token?: string }>('/profile/update', {
+        method: 'POST',
         body: JSON.stringify({
+          username: cleanUsername,
           displayName: displayName.trim(),
           bio: bio.trim(),
+          phone: phone.trim(),
           avatarUrl,
           avatarBase64,
           isPrivate: settings?.isPrivateAccount ?? user.isPrivate
         })
       });
 
+      const updatedUser = res.user || res.profile;
+
       if (avatarBase64) {
         saveLocalAvatarCache(user.id, avatarBase64);
+      }
+
+      if (updatedUser) {
+        isharaAuth.updateCurrentUser(updatedUser, res.token);
       }
 
       // Also update settings if private account was changed
@@ -157,6 +181,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
       await refreshUser();
       showToast('success', 'Profile updated successfully.');
+      if (onProfileUpdated && updatedUser) {
+        onProfileUpdated(updatedUser);
+      }
     } catch (err: any) {
       showToast('error', err.message || 'Failed to update profile.');
     } finally {
@@ -568,6 +595,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Username</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9._]/g, '').toLowerCase())}
+                          placeholder="username"
+                          className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-black font-medium"
+                        />
+                        <AtSign className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-3" />
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1">Letters, numbers, periods, and underscores only</p>
+                    </div>
+
+                    <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Display Name</label>
                       <input
                         type="text"
@@ -589,6 +632,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-black resize-none"
                       />
                       <span className="block text-[10px] text-gray-400 text-right">{bio.length}/160</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Phone Number (Optional)</label>
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          placeholder="+1234567890"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-black font-medium"
+                        />
+                        <Phone className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-3" />
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1">Used for account identification and direct login</p>
                     </div>
 
                     <button
